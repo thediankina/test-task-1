@@ -1,0 +1,2 @@
+<?php
+$MESS['THEDIANKINA_NEWS_SOMETHING_WENT_WRONG_ERROR'] = 'Что-то пошло не так';
