@@ -14,6 +14,7 @@ $APPLICATION->IncludeComponent(
     [
         "IBLOCK_TYPE" => "news",
         "IBLOCK_ID" => 1,
+        "PAGE_SIZE" => 2,
     ]
 );
 ?>

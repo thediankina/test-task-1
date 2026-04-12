@@ -9,6 +9,7 @@ use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\ObjectPropertyException;
 use Bitrix\Main\SystemException;
+use Bitrix\Main\UI\PageNavigation;
 
 Loc::loadMessages(__FILE__);
 
@@ -78,10 +79,24 @@ class NewsComponent extends CBitrixComponent
             'ACTIVE_FROM' => 'DESC',
         ];
 
+        $pagination = new PageNavigation('nav-news');
+        $pagination->initFromUri();
+
+        $pageSize = (int)$this->arParams['PAGE_SIZE'];
+
+        if ($pageSize > 0) {
+            $pagination->setPageSize($pageSize);
+        }
+
+        $totalCount = $elementTableClass::getCount($filter);
+        $pagination->setRecordCount($totalCount);
+
         $elements = $elementTableClass::query()
             ->setSelect($select)
             ->setFilter($filter)
             ->setOrder($order)
+            ->setLimit($pagination->getLimit())
+            ->setOffset($pagination->getOffset())
             ->fetchCollection();
 
         /** @var \Bitrix\Iblock\EO_Element $element */
@@ -95,6 +110,10 @@ class NewsComponent extends CBitrixComponent
                 'PREVIEW_PICTURE_PATH' => \CFile::GetPath($element->getPreviewPicture()),
                 'SECTION' => $element->getIblockSection()?->getName(),
             ];
+        }
+
+        if (!empty($this->arResult['ITEMS'])) {
+            $this->arResult['NAV_OBJECT'] = $pagination;
         }
     }
 }

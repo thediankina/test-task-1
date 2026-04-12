@@ -71,5 +71,11 @@ $arComponentParameters = [
             'TYPE' => 'LIST',
             'VALUES' => $iblocks,
         ],
+        'PAGE_SIZE' => [
+            'PARENT' => 'NEWS_LIST',
+            'NAME' => Loc::getMessage('THEDIANKINA_NEWS_PARAM_PAGE_SIZE_NAME'),
+            'TYPE' => 'NUMBER',
+            'DEFAULT' => 20,
+        ],
     ],
 ];
