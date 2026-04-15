@@ -4,6 +4,7 @@ if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
     die();
 }
 
+use Bitrix\Iblock\SectionTable;
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
@@ -79,6 +80,37 @@ class NewsComponent extends CBitrixComponent
             'ACTIVE_FROM' => 'DESC',
         ];
 
+        $name = $this->request->get('name');
+
+        if (!empty($name) && !is_array($name)) {
+            $name = htmlspecialcharsbx(strip_tags($name));
+            $filter['%NAME'] = $name;
+            $this->arResult['FILTER']['NAME'] = $name;
+        }
+
+        $dateFrom = $this->request->get('dateFrom');
+        $dateTo = $this->request->get('dateTo');
+
+        if (!empty($dateFrom) && !is_array($dateFrom)) {
+            $dateFrom = date('d.m.Y', (int)strtotime($dateFrom));
+            $filter['>=ACTIVE_FROM'] = $dateFrom;
+            $this->arResult['FILTER']['DATE_FROM'] = $dateFrom;
+        }
+
+        if (!empty($dateTo) && !is_array($dateTo)) {
+            $dateTo = date('d.m.Y', (int)strtotime($dateTo));
+            $filter['<=ACTIVE_FROM'] = $dateTo;
+            $this->arResult['FILTER']['DATE_TO'] = $dateTo;
+        }
+
+        $sectionId = $this->request->get('sectionId');
+
+        if (!empty($sectionId) && !is_array($sectionId)) {
+            $sectionId = (int)$sectionId;
+            $filter['=IBLOCK_SECTION_ID'] = $sectionId;
+            $this->arResult['FILTER']['SECTION_ID'] = $sectionId;
+        }
+
         $pagination = new PageNavigation('nav-news');
         $pagination->initFromUri();
 
@@ -108,12 +140,31 @@ class NewsComponent extends CBitrixComponent
                 'AUTHOR' => $element->getCreatedByUser()?->getName(),
                 'PREVIEW_TEXT' => $element->getPreviewText(),
                 'PREVIEW_PICTURE_PATH' => \CFile::GetPath($element->getPreviewPicture()),
-                'SECTION' => $element->getIblockSection()?->getName(),
+                'SECTION_ID' => $element->getIblockSection()?->getId(),
+                'SECTION_NAME' => $element->getIblockSection()?->getName(),
             ];
         }
 
         if (!empty($this->arResult['ITEMS'])) {
             $this->arResult['NAV_OBJECT'] = $pagination;
         }
+
+        $select = [
+            'ID',
+            'NAME',
+        ];
+        $filter = [
+            'GLOBAL_ACTIVE' => 'Y',
+            'IBLOCK_ID' => $iblockId,
+        ];
+        $order = [
+            'SORT' => 'ASC',
+        ];
+
+        $this->arResult['SECTIONS'] = SectionTable::query()
+            ->setSelect($select)
+            ->setFilter($filter)
+            ->setOrder($order)
+            ->fetchAll();
     }
 }
