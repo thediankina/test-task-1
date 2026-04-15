@@ -51,6 +51,37 @@ class NewsComponent extends CBitrixComponent
      */
     private function initResult(): void
     {
+        $this->prepareFilter();
+        $this->prepareSections();
+
+        $pagination = new PageNavigation('nav-news');
+        $pagination->initFromUri();
+
+        $pageSize = (int)$this->arParams['PAGE_SIZE'];
+
+        if ($pageSize > 0) {
+            $pagination->setPageSize($pageSize);
+        }
+
+        $this->prepareItems($pagination);
+
+        if (!empty($this->arResult['ITEMS'])) {
+            $this->arResult['NAV_OBJECT'] = $pagination;
+        }
+    }
+
+    /**
+     * @param PageNavigation $pagination
+     *
+     * @return void
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SystemException
+     */
+    private function prepareItems(PageNavigation $pagination): void
+    {
+        $this->arResult['ITEMS'] = [];
+
         $iblockId = (int)$this->arParams['IBLOCK_ID'];
 
         if (empty($iblockId)) {
@@ -73,55 +104,23 @@ class NewsComponent extends CBitrixComponent
             'PREVIEW_PICTURE',
             'SECTION_' => 'IBLOCK_SECTION',
         ];
-        $filter = [
+        $filter = array_filter([
             'ACTIVE' => 'Y',
-        ];
+            '%NAME' => $this->arResult['FILTER']['NAME'] ?: null,
+            '>=ACTIVE_FROM' => $this->arResult['FILTER']['DATE_FROM'] ?: null,
+            '<=ACTIVE_FROM' => $this->arResult['FILTER']['DATE_TO'] ?: null,
+            '=IBLOCK_SECTION_ID' => $this->arResult['FILTER']['SECTION_ID'] ?: null,
+        ]);
         $order = [
             'ACTIVE_FROM' => 'DESC',
         ];
 
-        $name = $this->request->get('name');
-
-        if (!empty($name) && !is_array($name)) {
-            $name = htmlspecialcharsbx(strip_tags($name));
-            $filter['%NAME'] = $name;
-            $this->arResult['FILTER']['NAME'] = $name;
-        }
-
-        $dateFrom = $this->request->get('dateFrom');
-        $dateTo = $this->request->get('dateTo');
-
-        if (!empty($dateFrom) && !is_array($dateFrom)) {
-            $dateFrom = date('d.m.Y', (int)strtotime($dateFrom));
-            $filter['>=ACTIVE_FROM'] = $dateFrom;
-            $this->arResult['FILTER']['DATE_FROM'] = $dateFrom;
-        }
-
-        if (!empty($dateTo) && !is_array($dateTo)) {
-            $dateTo = date('d.m.Y', (int)strtotime($dateTo));
-            $filter['<=ACTIVE_FROM'] = $dateTo;
-            $this->arResult['FILTER']['DATE_TO'] = $dateTo;
-        }
-
-        $sectionId = $this->request->get('sectionId');
-
-        if (!empty($sectionId) && !is_array($sectionId)) {
-            $sectionId = (int)$sectionId;
-            $filter['=IBLOCK_SECTION_ID'] = $sectionId;
-            $this->arResult['FILTER']['SECTION_ID'] = $sectionId;
-        }
-
-        $pagination = new PageNavigation('nav-news');
-        $pagination->initFromUri();
-
-        $pageSize = (int)$this->arParams['PAGE_SIZE'];
-
-        if ($pageSize > 0) {
-            $pagination->setPageSize($pageSize);
-        }
-
         $totalCount = $elementTableClass::getCount($filter);
         $pagination->setRecordCount($totalCount);
+
+        if ($totalCount === 0) {
+            return;
+        }
 
         $elements = $elementTableClass::query()
             ->setSelect($select)
@@ -144,9 +143,51 @@ class NewsComponent extends CBitrixComponent
                 'SECTION_NAME' => $element->getIblockSection()?->getName(),
             ];
         }
+    }
 
-        if (!empty($this->arResult['ITEMS'])) {
-            $this->arResult['NAV_OBJECT'] = $pagination;
+    /**
+     * @return void
+     */
+    private function prepareFilter(): void
+    {
+        $this->arResult['FILTER'] = [];
+
+        $name = $this->request->get('name');
+        $dateFrom = $this->request->get('dateFrom');
+        $dateTo = $this->request->get('dateTo');
+        $sectionId = $this->request->get('sectionId');
+
+        if (!empty($name) && !is_array($name)) {
+            $this->arResult['FILTER']['NAME'] = htmlspecialcharsbx(strip_tags($name));
+        }
+
+        if (!empty($dateFrom) && !is_array($dateFrom)) {
+            $this->arResult['FILTER']['DATE_FROM'] = date('d.m.Y', (int)strtotime($dateFrom));
+        }
+
+        if (!empty($dateTo) && !is_array($dateTo)) {
+            $this->arResult['FILTER']['DATE_TO'] = date('d.m.Y', (int)strtotime($dateTo));
+        }
+
+        if (!empty($sectionId) && !is_array($sectionId)) {
+            $this->arResult['FILTER']['SECTION_ID'] = (int)$sectionId;
+        }
+    }
+
+    /**
+     * @return void
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SystemException
+     */
+    private function prepareSections(): void
+    {
+        $this->arResult['SECTIONS'] = [];
+
+        $iblockId = (int)$this->arParams['IBLOCK_ID'];
+
+        if (empty($iblockId)) {
+            return;
         }
 
         $select = [
