@@ -4,10 +4,8 @@ if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
     die();
 }
 
-use Bitrix\Iblock\IblockTable;
-use Bitrix\Iblock\TypeLanguageTable;
-use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
+use lib\helpers\IblockHelper;
 
 /**
  * @var array $arCurrentValues
@@ -15,41 +13,8 @@ use Bitrix\Main\Localization\Loc;
 
 Loc::loadMessages(__FILE__);
 
-Loader::includeModule('iblock');
-
-$typeLangResult = TypeLanguageTable::getList([
-    'select' => ['IBLOCK_TYPE_ID', 'NAME'],
-    'filter' => ['LANGUAGE_ID' => 'ru'],
-    'cache' => [
-        'ttl' => 3600,
-        'cache_joins' => true,
-    ],
-]);
-
-$types = [];
-while ($type = $typeLangResult->fetchObject()) {
-    $types[$type->getIblockTypeId()] = $type->getName();
-}
-
-$iblocks = [];
-if (!empty($arCurrentValues['IBLOCK_TYPE'])) {
-    $iblockResult = IblockTable::getList([
-        'select' => ['ID', 'NAME'],
-        'filter' => [
-            'IBLOCK_TYPE_ID' => $arCurrentValues['IBLOCK_TYPE'],
-            'ACTIVE' => 'Y',
-        ],
-        'order' => ['SORT' => 'ASC'],
-        'cache' => [
-            'ttl' => 3600,
-            'cache_joins' => true,
-        ],
-    ]);
-
-    while ($iblock = $iblockResult->fetchObject()) {
-        $iblocks[$iblock->getId()] = $iblock->getName();
-    }
-}
+$types = IblockHelper::getTypes();
+$iblocks = $arCurrentValues['IBLOCK_TYPE'] ? IblockHelper::getIblocksByTypeId($arCurrentValues['IBLOCK_TYPE']) : [];
 
 $arComponentParameters = [
     'GROUPS' => [
