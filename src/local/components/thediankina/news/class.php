@@ -4,13 +4,13 @@ if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
     die();
 }
 
-use Bitrix\Iblock\SectionTable;
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\ObjectPropertyException;
 use Bitrix\Main\SystemException;
 use Bitrix\Main\UI\PageNavigation;
+use lib\exceptions\CustomException;
 
 Loc::loadMessages(__FILE__);
 
@@ -34,10 +34,35 @@ class NewsComponent extends CBitrixComponent
     {
         Loader::includeModule('iblock');
 
+        $iblockId = (int)$this->arParams['IBLOCK_ID'];
+
+        if (empty($iblockId)) {
+            ShowError(Loc::getMessage('THEDIANKINA_NEWS_IBLOCK_NOT_FOUND_ERROR'));
+
+            return;
+        }
+
+        $this->prepareFilter();
+
+        $this->arResult['NAV_OBJECT'] = new PageNavigation('nav-news');
+        $this->arResult['NAV_OBJECT']->initFromUri();
+
+        $pageSize = (int)$this->arParams['PAGE_SIZE'];
+
+        if ($pageSize > 0) {
+            $this->arResult['NAV_OBJECT']->setPageSize($pageSize);
+        }
+
         try {
-            $this->initResult();
-        } catch (SystemException) {
+            $this->prepareItems();
+        } catch (CustomException $e) {
+            ShowError($e->getMessage());
+
+            return;
+        } catch (Exception $e) {
             ShowError(Loc::getMessage('THEDIANKINA_NEWS_SOMETHING_WENT_WRONG_ERROR'));
+
+            return;
         }
 
         $this->includeComponentTemplate();
@@ -48,51 +73,21 @@ class NewsComponent extends CBitrixComponent
      * @throws ArgumentException
      * @throws ObjectPropertyException
      * @throws SystemException
+     * @throws CustomException
      */
-    private function initResult(): void
+    private function prepareItems(): void
     {
-        $this->prepareFilter();
-        $this->prepareSections();
-
-        $pagination = new PageNavigation('nav-news');
-        $pagination->initFromUri();
-
-        $pageSize = (int)$this->arParams['PAGE_SIZE'];
-
-        if ($pageSize > 0) {
-            $pagination->setPageSize($pageSize);
-        }
-
-        $this->prepareItems($pagination);
-
-        if (!empty($this->arResult['ITEMS'])) {
-            $this->arResult['NAV_OBJECT'] = $pagination;
-        }
-    }
-
-    /**
-     * @param PageNavigation $pagination
-     *
-     * @return void
-     * @throws ArgumentException
-     * @throws ObjectPropertyException
-     * @throws SystemException
-     */
-    private function prepareItems(PageNavigation $pagination): void
-    {
-        $this->arResult['ITEMS'] = [];
-
         $iblockId = (int)$this->arParams['IBLOCK_ID'];
 
         if (empty($iblockId)) {
-            return;
+            throw new CustomException(Loc::getMessage('THEDIANKINA_NEWS_IBLOCK_NOT_FOUND_ERROR'));
         }
 
         $iblock = \Bitrix\Iblock\Iblock::wakeUp($iblockId);
         $elementTableClass = $iblock->getEntityDataClass();
 
         if (empty($elementTableClass)) {
-            return;
+            throw new CustomException(Loc::getMessage('THEDIANKINA_NEWS_IBLOCK_NOT_FOUND_ERROR'));
         }
 
         $select = [
@@ -116,7 +111,7 @@ class NewsComponent extends CBitrixComponent
         ];
 
         $totalCount = $elementTableClass::getCount($filter);
-        $pagination->setRecordCount($totalCount);
+        $this->arResult['NAV_OBJECT']->setRecordCount($totalCount);
 
         if ($totalCount === 0) {
             return;
@@ -126,8 +121,8 @@ class NewsComponent extends CBitrixComponent
             ->setSelect($select)
             ->setFilter($filter)
             ->setOrder($order)
-            ->setLimit($pagination->getLimit())
-            ->setOffset($pagination->getOffset())
+            ->setLimit($this->arResult['NAV_OBJECT']->getLimit())
+            ->setOffset($this->arResult['NAV_OBJECT']->getOffset())
             ->fetchCollection();
 
         /** @var \Bitrix\Iblock\EO_Element $element */
@@ -150,8 +145,6 @@ class NewsComponent extends CBitrixComponent
      */
     private function prepareFilter(): void
     {
-        $this->arResult['FILTER'] = [];
-
         $name = $this->request->get('name');
         $dateFrom = $this->request->get('dateFrom');
         $dateTo = $this->request->get('dateTo');
@@ -172,40 +165,5 @@ class NewsComponent extends CBitrixComponent
         if (!empty($sectionId) && !is_array($sectionId)) {
             $this->arResult['FILTER']['SECTION_ID'] = (int)$sectionId;
         }
-    }
-
-    /**
-     * @return void
-     * @throws ArgumentException
-     * @throws ObjectPropertyException
-     * @throws SystemException
-     */
-    private function prepareSections(): void
-    {
-        $this->arResult['SECTIONS'] = [];
-
-        $iblockId = (int)$this->arParams['IBLOCK_ID'];
-
-        if (empty($iblockId)) {
-            return;
-        }
-
-        $select = [
-            'ID',
-            'NAME',
-        ];
-        $filter = [
-            'GLOBAL_ACTIVE' => 'Y',
-            'IBLOCK_ID' => $iblockId,
-        ];
-        $order = [
-            'SORT' => 'ASC',
-        ];
-
-        $this->arResult['SECTIONS'] = SectionTable::query()
-            ->setSelect($select)
-            ->setFilter($filter)
-            ->setOrder($order)
-            ->fetchAll();
     }
 }
