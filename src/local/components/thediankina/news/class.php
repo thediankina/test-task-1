@@ -4,7 +4,9 @@ if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
     die();
 }
 
+use Bitrix\Main\Application;
 use Bitrix\Main\ArgumentException;
+use Bitrix\Main\Data\Cache;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\ObjectPropertyException;
@@ -53,16 +55,38 @@ class NewsComponent extends CBitrixComponent
             $this->arResult['NAV_OBJECT']->setPageSize($pageSize);
         }
 
-        try {
-            $this->prepareItems();
-        } catch (CustomException $e) {
-            ShowError($e->getMessage());
+        $cache = Cache::createInstance();
+        $cacheId = 'thediankina_news_' . serialize($this->arResult['FILTER']) . '_' . $this->arResult['NAV_OBJECT']->getCurrentPage();
+        $cacheDir = '/thediankina_news/' . $iblockId . '/';
+        $cacheTtl = 3600;
 
-            return;
-        } catch (Exception $e) {
-            ShowError(Loc::getMessage('THEDIANKINA_NEWS_SOMETHING_WENT_WRONG_ERROR'));
+        $taggedCache = Application::getInstance()->getTaggedCache();
+        $tag = 'thediankina_iblock_' .$iblockId;
 
-            return;
+        if ($cache->initCache($cacheTtl, $cacheId, $cacheDir)) {
+            $this->arResult = $cache->getVars();
+        } else {
+            $cache->startDataCache();
+
+            try {
+                $this->prepareItems();
+
+                $taggedCache->startTagCache($cacheDir);
+                $taggedCache->registerTag($tag);
+                $taggedCache->endTagCache();
+            } catch (CustomException $e) {
+                $cache->abortDataCache();
+                ShowError($e->getMessage());
+
+                return;
+            } catch (Exception $e) {
+                $cache->abortDataCache();
+                ShowError(Loc::getMessage('THEDIANKINA_NEWS_SOMETHING_WENT_WRONG_ERROR'));
+
+                return;
+            }
+
+            $cache->endDataCache($this->arResult);
         }
 
         $this->includeComponentTemplate();
