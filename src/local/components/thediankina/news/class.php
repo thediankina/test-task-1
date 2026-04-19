@@ -175,7 +175,7 @@ class NewsComponent extends CBitrixComponent
         $sectionId = $this->request->get('sectionId');
 
         if (!empty($name) && !is_array($name)) {
-            $this->arResult['FILTER']['NAME'] = htmlspecialcharsbx(strip_tags($name));
+            $this->arResult['FILTER']['NAME'] = htmlspecialcharsbx(trim($name));
         }
 
         if (!empty($dateFrom) && !is_array($dateFrom)) {
