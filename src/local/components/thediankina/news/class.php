@@ -61,7 +61,7 @@ class NewsComponent extends CBitrixComponent
         $cacheTtl = 3600;
 
         $taggedCache = Application::getInstance()->getTaggedCache();
-        $tag = 'thediankina_iblock_' .$iblockId;
+        $tag = TAGGED_CACHE_THEDIANKINA_IBLOCK_TAG_PREFIX . '_' .$iblockId;
 
         if ($cache->initCache($cacheTtl, $cacheId, $cacheDir)) {
             $this->arResult = $cache->getVars();

@@ -23,7 +23,7 @@ class EventHandler
 
         if (!empty($iblockId)) {
             $taggedCache = Application::getInstance()->getTaggedCache();
-            $tag = 'thediankina_iblock_' . $iblockId;
+            $tag = TAGGED_CACHE_THEDIANKINA_IBLOCK_TAG_PREFIX . '_' . $iblockId;
             $taggedCache->clearByTag($tag);
         }
     }

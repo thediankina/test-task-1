@@ -5,4 +5,5 @@ if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
 }
 
 include_once __DIR__ . '/lib/autoload.php';
+include_once __DIR__ . '/const.php';
 include_once __DIR__ . '/events.php';
