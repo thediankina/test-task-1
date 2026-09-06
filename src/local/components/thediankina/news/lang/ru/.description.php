@@ -1,0 +1,4 @@
+<?php
+$MESS['THEDIANKINA_NEWS_COMPONENT_NAME'] = 'Новости';
+$MESS['THEDIANKINA_NEWS_COMPONENT_DESCRIPTION'] = 'Выводит список новостей';
+$MESS['THEDIANKINA_NEWS_COMPONENT_PATH_NAME'] = 'Мои компоненты';
